@@ -9,6 +9,7 @@ from alembic_postgresql_enum.add_create_type_false import add_create_type_false
 from alembic_postgresql_enum.add_postgres_using_to_text import (
     add_postgres_using_to_text,
 )
+from alembic_postgresql_enum.configuration import get_configuration
 from alembic_postgresql_enum.detection_of_changes import (
     sync_changed_enums,
     create_new_enums,
@@ -46,14 +47,18 @@ def compare_enums(
         return
 
     add_create_type_false(upgrade_ops)
-    add_postgres_using_to_text(upgrade_ops)
+    if get_configuration().add_using_to_alter_operation:
+        add_postgres_using_to_text(upgrade_ops)
 
     schema_names = list(schema_names)
 
     # Issue #40
     # Add schema if it is gonna be created inside the migration
     for operations_group in upgrade_ops.ops:
-        if isinstance(operations_group, CreateTableOp) and operations_group.schema not in schema_names:
+        if (
+            isinstance(operations_group, CreateTableOp)
+            and operations_group.schema not in schema_names
+        ):
             schema_names.append(operations_group.schema)
 
     for schema in schema_names:
@@ -63,7 +68,11 @@ def compare_enums(
 
         definitions = get_defined_enums(autogen_context.connection, schema)
         declarations = get_declared_enums(
-            autogen_context.metadata, schema, default_schema, autogen_context.connection, upgrade_ops
+            autogen_context.metadata,
+            schema,
+            default_schema,
+            autogen_context.connection,
+            upgrade_ops,
         )
 
         create_new_enums(definitions, declarations.enum_values, schema, upgrade_ops)

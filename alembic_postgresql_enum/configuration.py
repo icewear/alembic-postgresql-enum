@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class Config:
     add_type_ignore: bool = False
+    add_using_to_alter_operation: bool = True
 
 
 _config = Config()
